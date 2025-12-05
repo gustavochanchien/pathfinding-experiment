@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vehicle Pathfinding Simulator</title>
+  
+  <link href="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Outfit:wght@300;500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div class="loading" id="loading">
+  <div class="progress-container">
+    <div class="progress-bar" id="loading-bar"></div>
+  </div>
+  <div id="loading-text" class="loading-text">Initializing System...</div>
+</div>
+
+<button class="info-btn" onclick="toggleModal()">i</button>
+
+<div class="modal-overlay" id="info-modal">
+  <div class="modal">
+    <button class="close-btn" onclick="toggleModal()">&times;</button>
+    <h2>Technical Overview</h2>
+    
+    <div class="scroll-content">
+      <h3>1. The Digital Twin</h3>
+      <p>
+        This simulation constructs a graph network of Albuquerque using live <strong>OpenStreetMap (OSM)</strong> data via the Overpass API. 
+        <br><br>
+        It parses raw vector nodes to differentiate between <strong>Residential</strong> (Green) and <strong>Commercial</strong> (Blue) zones, generating agents with specific home/work coordinates.
+        Need to add the university and maybe some other zones.
+      </p>
+
+      <h3>2. Traffic Physics (Spatial Hashing)</h3>
+      <p>
+        We use a <strong>Spatial Hash Grid</strong> to track agent density. If multiple agents occupy the same grid cell, a "Congestion Penalty" is applied to their speed.
+        <br><br>
+        <em>Current Setting:</em> <strong>1% Slowdown</strong> per neighbor. Higher numbers creates emergent traffic jams on main arteries and intersections.
+      </p>
+
+      <h3>3. Visualizing Algorithms</h3>
+      <p>
+        <strong>Yellow Tendrils:</strong> Represent the "Search Space"—the nodes the algorithm considered in memory before finding a solution.
+        <br>
+        <strong>Cyan/Green Lines:</strong> The final calculated path.
+        <br><br>
+        <em>Tip: Lower the population to &lt; 10 to see the "Thinking Process" in slow motion.</em>
+      </p>
+
+      <h3>4. Batching & Departure</h3>
+      <p>
+        To simulate rush hour, we use <strong>Synced Departure</strong>. Agents calculate paths asynchronously (background) but wait in a "Ready" pool. They are released in <strong>Batches</strong> to create waves of traffic, rather than a steady trickle.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div id="map"></div>                 <canvas id="heatmap-canvas"></canvas> <canvas id="car-canvas"></canvas>     
+
+<div class="ui-panel" id="ui-panel">
+  <button class="collapse-btn" id="collapse-btn" onclick="togglePanel()">&#9650;</button> 
+  <span id="collapsed-label" class="collapsed-label">Algorithm: A*</span>
+  <div class="panel-content" id="panel-content">  
+  
+    <div class="stat-row"><span>Algorithm</span></div>
+    <select id="algo-select" onchange="setAlgorithm(this.value)">
+        <option value="astar">A* (Balanced Heuristic)</option>
+        <option value="dijkstra">Dijkstra (Guaranteed Shortest)</option>
+        <option value="greedy">Greedy Best-First (Fastest Calc)</option>
+        <option value="bfs">Breadth-First (Unweighted)</option>
+        <option value="dfs">Depth-First (Chaotic)</option>
+    </select>
+
+    <div style="margin-bottom: 5px;">
+      <label class="checkbox-label">
+        <input type="checkbox" id="show-paths" onchange="toggleShowPaths(this.checked)" checked>
+        Show Path Lines
+      </label>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" onclick="setSpeed(1)">1x</button>
+      <button class="btn" onclick="setSpeed(10)">10x</button>
+      <button class="btn active" onclick="setSpeed(100)">100x</button>
+      <button class="btn" onclick="setSpeed(1000)">1k</button>
+    </div>
+
+    <div class="control-group">
+      <button class="cmd-btn cmd-work" onclick="forceCommute('WORK')">Force To Work</button>
+      <button class="cmd-btn cmd-home" onclick="forceCommute('HOME')">Force Home</button>
+      <button class="cmd-btn cmd-cycle" id="btn-cycle" onclick="toggleCycle()">Cycle: OFF</button>
+    </div>
+
+    <div class="control-box batch-box">
+      <label class="checkbox-label">
+        <input type="checkbox" id="shared-departure" onchange="toggleSharedDeparture(this.checked)" checked>
+        Synced Departure <span id="shared-counter" style="color: #FFC107; font-weight: bold;"></span>
+      </label>
+
+      <div class="batch-row">
+        <label class="checkbox-label highlight-text">
+          <input type="checkbox" id="auto-release-check" onchange="toggleAutoBatch(this.checked)" checked>
+          Auto-Release Batch
+        </label>
+        
+        <input type="number" id="batch-input" value="50" min="1" max="3000" onchange="setBatchSize(this.value)" class="mini-input">
+      </div>
+
+    </div>
+
+  <div class="control-box traffic-box">
+     <div class="stat-row" style="margin-bottom: 5px;">
+        <span style="color: #FFAB91;">Congestion Penalty</span>
+        <span class="val" id="traffic-val" style="color: #FFAB91;">1%</span>
+     </div>
+     <input type="range" id="traffic-slider" min="0" max="50" step="1" value="1" 
+            oninput="updateTraffic(this.value)" class="traffic-range">
+  </div>
+
+  <div class="history-controls">
+    <button class="history-btn" id="hist-prev" onclick="changeHistory(-1)">&lt;</button>
+    <span class="history-label live" id="hist-label">LIVE RUN</span>
+    <button class="history-btn" id="hist-next" onclick="changeHistory(1)" disabled>&gt;</button>
+  </div>
+
+  <div class="stats-container">
+    <div class="stat-row"><span>Commuters</span><span class="val" id="stat-moving" style="color: #eee">0</span></div>
+    <div class="stat-row"><span>Avg Calc Cost</span><span class="val" id="stat-calc" style="color: #FFEB3B">0.00 ms</span></div>
+    <div class="stat-row"><span>Avg Trip Time</span><span class="val" id="stat-trip" style="color: #00E5FF">0 min</span></div>
+    <div class="queue-container"><div class="queue-bar" id="queue-bar"></div></div>
+  </div>
+
+  <div style="margin-top: 15px;">
+    <div class="legend-item"><div class="dot res-dot"></div> Residential</div>
+    <div class="legend-item"><div class="dot com-dot"></div> Commercial</div>
+  </div>
+
+  <div class="pop-control">
+    <div class="stat-row">
+      <span>Population</span>
+      <span class="val" id="pop-val">1000</span>
+      <button class="reset-btn" onclick="resetSimulation()">RESET</button>
+    </div>
+    <input type="range" id="agent-slider" min="0" max="3000" step="1" value="1000">
+  </div>
+
+
+</div> </div>
+
+<script src="https://unpkg.com/maplibre-gl@4.1.2/dist/maplibre-gl.js"></script>
+<script src="algorithms.js"></script>
+<script src="pathfinding.js"></script>
+
+</body>
+</html>
