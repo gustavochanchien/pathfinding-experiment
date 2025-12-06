@@ -1,8 +1,3 @@
-/**
- * ABQ SIMULATOR: CORE CONTROLLER
- * Handles MapLibre integration, Agent logic, Rendering loop, and UI interaction.
- */
-
 // --- CONFIGURATION & CONSTANTS ---
 // const MIN_LAT = 35.0405; 
 // const MAX_LAT = 35.1445; 
