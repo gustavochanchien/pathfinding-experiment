@@ -1,6 +1,5 @@
 # Pathfinder Agents on Albuquerque Map
 
-## 
 [https://gustavochanchien.github.io/pathfinding-experiment/](https://gustavochanchien.github.io/pathfinding-experiment/)
 ## 
 
