@@ -1,6 +1,7 @@
 # Pathfinder Agents on Albuquerque Map
 
 ## 
+[https://gustavochanchien.github.io/pathfinding-experiment/](https://gustavochanchien.github.io/pathfinding-experiment/)
 ## 
 
 Interactive, browser-based simulation of commuter traffic flow across Albuquerque, NM, focusing on the performance and visualization of various **Graph Pathfinding Algorithms**.
@@ -9,7 +10,7 @@ Just a fun project I was thinking about for exploring how different pathfinding 
 
 Also just generally thinking about distance maps and taking the highway vs local roads. I always drive local.
 
-Trying to simulate something like this with the traffic congestion penalty: https://gps.unm.edu/tru/reports/crash-maps/2022/major-city-maps/albuquerque/abq_all-crash_density.pdf. 
+Trying to simulate something like this with the traffic congestion penalty: [https://gps.unm.edu/tru/reports/crash-maps/2022/major-city-maps/albuquerque/abq_all-crash_density.pdf](https://gustavochanchien.github.io/pathfinding-experiment/). 
 
 My deciding factor for spawning homes is reliant on the pieces of road so some places can get way too many if they have a lot of cul de sacs or curvy streets. Still working on this fix.
 
